@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GREENSYNC – Smart Greenhouse Berbasis IoT</title>
+  <meta name="description" content="GREENSYNC: sistem Smart Greenhouse berbasis IoT dengan ESP32, DHT22, Soil Moisture, dan LDR.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <header class="navbar" id="navbar">
+    <a href="#beranda" class="brand">
+      <span class="brand-icon">🌿</span>
+      <span>GREEN<b>SYNC</b></span>
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#beranda">Beranda</a>
+      <a href="#dashboard">Dashboard</a>
+      <a href="#kontrol">Kontrol</a>
+      <a href="#grafik">Grafik</a>
+      <a href="#sistem">Sistem</a>
+      <a href="#komponen">Komponen</a>
+    </nav>
+    <div class="conn-badge" id="connBadge"><span class="dot"></span><span id="connText">Mode Demo</span></div>
+    <button class="burger" id="burger" aria-label="Menu">☰</button>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero" id="beranda">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="leaves" id="leaves"></div>
+
+    <div class="hero-inner">
+      <span class="chip">🌱 Proyek Internet of Things</span>
+      <h1>GREEN<span class="grad">SYNC</span></h1>
+      <p class="hero-sub">Smart Greenhouse Berbasis IoT</p>
+      <p class="hero-desc">
+        Pemantauan dan pengendalian lingkungan tanaman secara otomatis, efisien, dan real-time
+        menggunakan ESP32, sensor suhu, kelembapan, dan cahaya.
+      </p>
+      <div class="hero-cta">
+        <a href="#dashboard" class="btn btn-primary">Buka Dashboard</a>
+        <a href="#sistem" class="btn btn-ghost">Tentang Sistem</a>
+      </div>
+
+      <div class="team">
+        <h3>Tim Pengembang</h3>
+        <div class="team-grid">
+          <div class="member"><div class="avatar">RS</div><span>Ridho Syahban</span></div>
+          <div class="member"><div class="avatar">ID</div><span>Irvan Dinata</span></div>
+          <div class="member"><div class="avatar">TL</div><span>Tika Juni Lestari</span></div>
+          <div class="member"><div class="avatar">PD</div><span>Putri Dawolo</span></div>
+          <div class="member"><div class="avatar">NN</div><span>Nur Nabillah</span></div>
+        </div>
+      </div>
+    </div>
+    <a href="#dashboard" class="scroll-hint">↓</a>
+  </section>
+
+  <!-- DASHBOARD -->
+  <section class="section" id="dashboard">
+    <div class="section-head">
+      <span class="eyebrow">Monitoring</span>
+      <h2>Dashboard Real-Time</h2>
+      <p>Kondisi greenhouse diperbarui otomatis. Terakhir diperbarui: <b id="lastUpdate">–</b></p>
+    </div>
+
+    <div class="grid-4">
+      <article class="card sensor" data-tone="temp">
+        <div class="sensor-top"><span class="s-ico">🌡️</span><span class="s-name">Suhu Udara</span></div>
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringTemp" cx="60" cy="60" r="52"/></svg>
+          <div class="ring-val"><b id="valTemp">--</b><small>°C</small></div>
+        </div>
+        <div class="s-status" id="stTemp">–</div>
+        <div class="s-meta">Sensor DHT22</div>
+      </article>
+
+      <article class="card sensor" data-tone="hum">
+        <div class="sensor-top"><span class="s-ico">💧</span><span class="s-name">Kelembapan Udara</span></div>
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringHum" cx="60" cy="60" r="52"/></svg>
+          <div class="ring-val"><b id="valHum">--</b><small>%</small></div>
+        </div>
+        <div class="s-status" id="stHum">–</div>
+        <div class="s-meta">Sensor DHT22</div>
+      </article>
+
+      <article class="card sensor" data-tone="soil">
+        <div class="sensor-top"><span class="s-ico">🪴</span><span class="s-name">Kelembapan Tanah</span></div>
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringSoil" cx="60" cy="60" r="52"/></svg>
+          <div class="ring-val"><b id="valSoil">--</b><small>%</small></div>
+        </div>
+        <div class="s-status" id="stSoil">–</div>
+        <div class="s-meta">Capacitive Soil Moisture</div>
+      </article>
+
+      <article class="card sensor" data-tone="light">
+        <div class="sensor-top"><span class="s-ico">☀️</span><span class="s-name">Intensitas Cahaya</span></div>
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringLight" cx="60" cy="60" r="52"/></svg>
+          <div class="ring-val"><b id="valLight">--</b><small>%</small></div>
+        </div>
+        <div class="s-status" id="stLight">–</div>
+        <div class="s-meta">Sensor LDR</div>
+      </article>
+    </div>
+
+    <div class="grid-2">
+      <article class="card">
+        <h3 class="card-title">📟 Tampilan LCD I2C 16×2</h3>
+        <div class="lcd" aria-label="Simulasi LCD">
+          <div id="lcd1">T:--.-C H:--%</div>
+          <div id="lcd2">Soil:--% L:--%</div>
+        </div>
+        <p class="hint">Tampilan ini meniru data yang tampil pada LCD fisik di prototype.</p>
+      </article>
+
+      <article class="card">
+        <h3 class="card-title">📋 Log Aktivitas</h3>
+        <ul class="log" id="logList"></ul>
+      </article>
+    </div>
+  </section>
+
+  <!-- KONTROL -->
+  <section class="section alt" id="kontrol">
+    <div class="section-head">
+      <span class="eyebrow">Aktuator</span>
+      <h2>Kontrol Perangkat</h2>
+      <p>Pilih mode otomatis (berdasarkan sensor) atau manual (kendali langsung dari website).</p>
+    </div>
+
+    <div class="mode-switch" id="modeSwitch">
+      <button class="mode-btn active" data-mode="auto">⚙️ Otomatis</button>
+      <button class="mode-btn" data-mode="manual">🕹️ Manual</button>
+    </div>
+
+    <div class="grid-3">
+      <article class="card device" id="devPump">
+        <div class="dev-ico">🚿</div>
+        <h3>Pompa Air</h3>
+        <p>Menyiram saat tanah terlalu kering.</p>
+        <label class="switch"><input type="checkbox" id="swPump"><span class="slider"></span></label>
+        <div class="dev-state" id="stPump">MATI</div>
+      </article>
+      <article class="card device" id="devFan">
+        <div class="dev-ico fan">🌀</div>
+        <h3>Kipas</h3>
+        <p>Aktif saat suhu udara terlalu tinggi.</p>
+        <label class="switch"><input type="checkbox" id="swFan"><span class="slider"></span></label>
+        <div class="dev-state" id="stFan">MATI</div>
+      </article>
+      <article class="card device" id="devGrow">
+        <div class="dev-ico">💡</div>
+        <h3>LED Grow Light</h3>
+        <p>Menyala saat cahaya tidak mencukupi.</p>
+        <label class="switch"><input type="checkbox" id="swGrow"><span class="slider"></span></label>
+        <div class="dev-state" id="stGrow">MATI</div>
+      </article>
+    </div>
+
+    <article class="card settings">
+      <h3 class="card-title">🎚️ Batas Otomatisasi (Threshold)</h3>
+      <div class="sliders">
+        <div class="range">
+          <label>Pompa menyala jika tanah &lt; <b id="lbSoil">40</b>%</label>
+          <input type="range" id="rgSoil" min="10" max="80" value="40">
+        </div>
+        <div class="range">
+          <label>Kipas menyala jika suhu &gt; <b id="lbTemp">32</b>°C</label>
+          <input type="range" id="rgTemp" min="22" max="45" value="32">
+        </div>
+        <div class="range">
+          <label>Grow light menyala jika cahaya &lt; <b id="lbLight">30</b>%</label>
+          <input type="range" id="rgLight" min="5" max="80" value="30">
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- GRAFIK -->
+  <section class="section" id="grafik">
+    <div class="section-head">
+      <span class="eyebrow">Riwayat</span>
+      <h2>Grafik Sensor</h2>
+      <p>Menampilkan 40 pembacaan terakhir.</p>
+    </div>
+    <div class="grid-2">
+      <article class="card">
+        <h3 class="card-title">Suhu &amp; Kelembapan Udara</h3>
+        <div class="legend"><span class="lg temp">Suhu (°C)</span><span class="lg hum">Kelembapan (%)</span></div>
+        <canvas id="chartAir" height="260"></canvas>
+      </article>
+      <article class="card">
+        <h3 class="card-title">Kelembapan Tanah &amp; Cahaya</h3>
+        <div class="legend"><span class="lg soil">Tanah (%)</span><span class="lg light">Cahaya (%)</span></div>
+        <canvas id="chartSoil" height="260"></canvas>
+      </article>
+    </div>
+  </section>
+
+  <!-- SISTEM -->
+  <section class="section alt" id="sistem">
+    <div class="section-head">
+      <span class="eyebrow">Tentang</span>
+      <h2>Cara Kerja Sistem</h2>
+      <p>ESP32 membaca sensor, memproses data, lalu mengendalikan perangkat dan mengirim data ke dashboard melalui Wi-Fi.</p>
+    </div>
+
+    <div class="flow">
+      <div class="flow-step"><span>1</span><b>Sensor</b><small>DHT22, Soil Moisture, LDR membaca kondisi greenhouse</small></div>
+      <div class="flow-arrow">➜</div>
+      <div class="flow-step"><span>2</span><b>ESP32</b><small>Memproses data dan mengambil keputusan</small></div>
+      <div class="flow-arrow">➜</div>
+      <div class="flow-step"><span>3</span><b>Relay</b><small>Mengendalikan pompa, kipas, dan grow light</small></div>
+      <div class="flow-arrow">➜</div>
+      <div class="flow-step"><span>4</span><b>Dashboard</b><small>Data dikirim via Wi-Fi dan dipantau lewat smartphone</small></div>
+    </div>
+
+    <div class="grid-3 rules">
+      <div class="card rule"><h4>🚿 Tanah kering</h4><p>Kelembapan tanah di bawah batas → relay mengaktifkan pompa air 12 V.</p></div>
+      <div class="card rule"><h4>🌀 Suhu tinggi</h4><p>Suhu di atas batas → relay menyalakan DC Fan 12 V untuk sirkulasi udara.</p></div>
+      <div class="card rule"><h4>💡 Cahaya kurang</h4><p>Intensitas cahaya di bawah batas → LED grow light dinyalakan.</p></div>
+    </div>
+
+    <article class="card power">
+      <h3 class="card-title">⚡ Jalur Daya</h3>
+      <p>Adaptor DC 12 V menyuplai pompa dan kipas secara langsung. Modul LM2596 menurunkan tegangan menjadi 5 V untuk ESP32 dan modul relay.</p>
+    </article>
+  </section>
+
+  <!-- KOMPONEN -->
+  <section class="section" id="komponen">
+    <div class="section-head">
+      <span class="eyebrow">Perangkat Keras</span>
+      <h2>Daftar Komponen</h2>
+    </div>
+    <div class="table-wrap card">
+      <table>
+        <thead><tr><th>No.</th><th>Komponen</th><th>Jumlah</th><th>Fungsi</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>ESP32 DevKit V1</td><td>1</td><td>Mikrokontroler dan komunikasi Wi-Fi</td></tr>
+          <tr><td>2</td><td>Sensor DHT22</td><td>1</td><td>Mengukur suhu dan kelembapan udara</td></tr>
+          <tr><td>3</td><td>Capacitive Soil Moisture Sensor</td><td>1</td><td>Mengukur kelembapan tanah</td></tr>
+          <tr><td>4</td><td>Sensor LDR</td><td>1</td><td>Mendeteksi intensitas cahaya</td></tr>
+          <tr><td>5</td><td>Resistor 10 kΩ</td><td>1</td><td>Pembagi tegangan sensor LDR</td></tr>
+          <tr><td>6</td><td>Modul Relay 4 Channel 5 V</td><td>1</td><td>Mengendalikan perangkat listrik</td></tr>
+          <tr><td>7</td><td>Mini Water Pump DC 12 V</td><td>1</td><td>Melakukan penyiraman otomatis</td></tr>
+          <tr><td>8</td><td>DC Fan 12 V</td><td>1</td><td>Mengatur sirkulasi udara</td></tr>
+          <tr><td>9</td><td>LED Grow Light</td><td>1</td><td>Memberikan pencahayaan tambahan</td></tr>
+          <tr><td>10</td><td>LCD I2C 16×2</td><td>1</td><td>Menampilkan data pembacaan sensor</td></tr>
+          <tr><td>11</td><td>Modul LM2596</td><td>1</td><td>Menurunkan tegangan 12 V menjadi 5 V</td></tr>
+          <tr><td>12</td><td>Adaptor DC 12 V</td><td>1</td><td>Sumber tegangan utama</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- KONEKSI -->
+    <article class="card conn-card">
+      <h3 class="card-title">🔌 Sambungan ke ESP32</h3>
+      <p class="hint">Gunakan <b>Mode Demo</b> untuk simulasi tanpa perangkat. Pilih <b>Mode Live</b> dan isi alamat IP ESP32 agar website membaca data sensor asli.</p>
+      <div class="conn-form">
+        <select id="srcSelect">
+          <option value="demo">Mode Demo (simulasi)</option>
+          <option value="live">Mode Live (ESP32)</option>
+        </select>
+        <input type="text" id="deviceUrl" placeholder="http://192.168.1.50">
+        <button class="btn btn-primary" id="saveConn">Simpan &amp; Hubungkan</button>
+      </div>
+      <p class="hint small">Endpoint yang diharapkan: <code>GET /api/data</code> dan <code>POST /api/control</code> (lihat komentar di <code>script.js</code>).</p>
+    </article>
+  </section>
+
+  <footer class="footer">
+    <div class="brand"><span class="brand-icon">🌿</span><span>GREEN<b>SYNC</b></span></div>
+    <p>GREENSYNC – Smart Greenhouse Berbasis IoT</p>
+    <p class="credits">Ridho Syahban · Irvan Dinata · Tika Juni Lestari · Putri Dawolo · Nur Nabillah</p>
+  </footer>
+
+  <div class="toast" id="toast"></div>
+  <script src="script.js"></script>
+</body>
+</html>
