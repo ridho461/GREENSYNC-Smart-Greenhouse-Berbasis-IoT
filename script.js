@@ -9,10 +9,11 @@
 
    KONTRAK API ESP32 (mode live)
    GET  {url}/api/data
-        -> {"temp":28.4,"hum":71,"soil":55,"light":62,
+        -> {"temp":28.4,"hum":71,"soil":55,"light":62,"gas":12,
             "pump":false,"fan":false,"grow":false}
    POST {url}/api/control
         body JSON: {"device":"pump|fan|grow","state":true|false}
+        atau       {"soil_th":40,"temp_th":32,"light_th":30,"gas_th":50}
         atau       {"mode":"auto|manual"}
    Catatan: ESP32 harus mengaktifkan CORS
    (header Access-Control-Allow-Origin: *).
@@ -33,10 +34,11 @@
     source: 'demo',
     url: '',
     mode: 'auto',
-    data: { temp: 28, hum: 70, soil: 55, light: 60 },
+    data: { temp: 28, hum: 70, soil: 55, light: 60, gas: 12 },
     dev: { pump: false, fan: false, grow: false },
-    th: { soil: 40, temp: 32, light: 30 },
-    hist: { temp: [], hum: [], soil: [], light: [] },
+    th: { soil: 40, temp: 32, light: 30, gas: 50 },
+    hist: { temp: [], hum: [], soil: [], light: [], gas: [] },
+    gasSpike: 0,
     tick: 0,
     timer: null
   };
@@ -104,17 +106,19 @@
   }
 
   function renderSensors() {
-    const { temp, hum, soil, light } = state.data;
+    const { temp, hum, soil, light, gas } = state.data;
 
     $('valTemp').textContent = temp.toFixed(1);
     $('valHum').textContent = Math.round(hum);
     $('valSoil').textContent = Math.round(soil);
     $('valLight').textContent = Math.round(light);
+    $('valGas').textContent = Math.round(gas);
 
     setRing('ringTemp', (temp / 50) * 100);
     setRing('ringHum', hum);
     setRing('ringSoil', soil);
     setRing('ringLight', light);
+    setRing('ringGas', gas);
 
     if (temp > state.th.temp) setStatus('stTemp', 'Terlalu Panas', 'bad');
     else if (temp < 20) setStatus('stTemp', 'Dingin', 'warn');
@@ -131,9 +135,31 @@
     if (light < state.th.light) setStatus('stLight', 'Kurang Cahaya', 'warn');
     else setStatus('stLight', 'Cukup');
 
-    $('lcd1').textContent = `T:${temp.toFixed(1)}C H:${pad(Math.round(hum))}%`.padEnd(16, ' ');
-    $('lcd2').textContent = `Soil:${pad(Math.round(soil))}% L:${pad(Math.round(light))}%`.padEnd(16, ' ');
+    if (gas > state.th.gas) setStatus('stGas', 'BAHAYA', 'bad');
+    else if (gas > state.th.gas * 0.6) setStatus('stGas', 'Waspada', 'warn');
+    else setStatus('stGas', 'Aman');
+    $('gasAlert').hidden = !(gas > state.th.gas);
+
+    renderLcd();
     $('lastUpdate').textContent = nowStr();
+  }
+
+  /* ---------- LCD I2C 16x4 ---------- */
+  function gasLabel() {
+    const g = state.data.gas;
+    if (g > state.th.gas) return 'BAHAYA';
+    if (g > state.th.gas * 0.6) return 'WASPADA';
+    return 'AMAN';
+  }
+
+  function renderLcd() {
+    const { temp, hum, soil, light, gas } = state.data;
+    const f = (b) => (b ? '1' : '0');
+    const L = (t) => t.slice(0, 16).padEnd(16, ' ');
+    $('lcd1').textContent = L(`T:${temp.toFixed(1)}C H:${pad(Math.round(hum))}%`);
+    $('lcd2').textContent = L(`Soil:${pad(Math.round(soil))}% L:${pad(Math.round(light))}%`);
+    $('lcd3').textContent = L(`Gas:${pad(Math.round(gas))}% ${gasLabel()}`);
+    $('lcd4').textContent = L(`P:${f(state.dev.pump)} F:${f(state.dev.fan)} G:${f(state.dev.grow)} ${state.mode === 'auto' ? 'AUTO' : 'MAN'}`);
   }
 
   /* ---------- Device UI ---------- */
@@ -152,6 +178,7 @@
       $(m.card).classList.toggle('on', on);
       $(m.st).textContent = on ? 'MENYALA' : 'MATI';
     }
+    renderLcd();
   }
 
   function setDevice(k, on, reason) {
@@ -163,9 +190,11 @@
 
   function autoLogic() {
     if (state.mode !== 'auto') return;
-    const { temp, soil, light } = state.data;
+    const { temp, soil, light, gas } = state.data;
     setDevice('pump', soil < state.th.soil, soil < state.th.soil ? 'tanah kering' : 'tanah cukup lembap');
-    setDevice('fan', temp > state.th.temp, temp > state.th.temp ? 'suhu tinggi' : 'suhu normal');
+    const hot = temp > state.th.temp;
+    const gasHigh = gas > state.th.gas;
+    setDevice('fan', hot || gasHigh, gasHigh ? 'gas terdeteksi' : hot ? 'suhu tinggi' : 'kondisi normal');
     setDevice('grow', light < state.th.light, light < state.th.light ? 'cahaya kurang' : 'cahaya cukup');
   }
 
@@ -201,13 +230,17 @@
     d.hum = clamp(82 - day * 28 + rand(-1.5, 1.5), 30, 98);
     // tanah mengering perlahan, naik saat pompa menyala
     d.soil = clamp(d.soil - 0.9 + (state.dev.pump ? 4.2 : 0) + rand(-0.2, 0.2), 8, 95);
+    // gas MQ-2: nilai dasar rendah, sesekali muncul lonjakan; kipas mempercepat penurunan
+    if (Math.random() < 0.015) state.gasSpike = rand(45, 85);
+    state.gasSpike *= state.dev.fan ? 0.7 : 0.93;
+    d.gas = clamp(10 + Math.sin(t / 9) * 2 + rand(-1, 1) + state.gasSpike, 0, 100);
     // efek kipas menurunkan suhu
     if (state.dev.fan) d.temp = clamp(d.temp - 1.5, 18, 42);
     if (state.dev.grow) d.light = clamp(d.light + 20, 0, 100);
   }
 
   /* ---------- Charts (canvas) ---------- */
-  const colors = { temp: '#fb923c', hum: '#38bdf8', soil: '#a78bfa', light: '#facc15' };
+  const colors = { temp: '#fb923c', hum: '#38bdf8', soil: '#a78bfa', light: '#facc15', gas: '#f472b6' };
 
   function drawChart(canvasId, series) {
     const cv = $(canvasId);
@@ -269,10 +302,11 @@
   function renderCharts() {
     drawChart('chartAir', [{ key: 'hum', color: colors.hum }, { key: 'temp', color: colors.temp }]);
     drawChart('chartSoil', [{ key: 'light', color: colors.light }, { key: 'soil', color: colors.soil }]);
+    drawChart('chartGas', [{ key: 'gas', color: colors.gas }]);
   }
 
   function pushHistory() {
-    for (const k of ['temp', 'hum', 'soil', 'light']) {
+    for (const k of ['temp', 'hum', 'soil', 'light', 'gas']) {
       state.hist[k].push(state.data[k]);
       if (state.hist[k].length > MAX_POINTS) state.hist[k].shift();
     }
@@ -293,6 +327,7 @@
         state.data.hum = Number(j.hum);
         state.data.soil = Number(j.soil);
         state.data.light = Number(j.light);
+        if (j.gas !== undefined) state.data.gas = Number(j.gas);
         // di mode live, status perangkat dibaca dari ESP32
         for (const k of ['pump', 'fan', 'grow']) {
           if (typeof j[k] === 'boolean') state.dev[k] = j[k];
@@ -338,17 +373,22 @@
     });
   }
 
-  function bindRange(id, lbId, key) {
+  function bindRange(id, lbId, key, apiKey) {
+    let t;
     $(id).addEventListener('input', (e) => {
       state.th[key] = Number(e.target.value);
       $(lbId).textContent = e.target.value;
       renderSensors();
       autoLogic();
+      // kirim ke ESP32 setelah slider berhenti digeser
+      clearTimeout(t);
+      t = setTimeout(() => sendControl({ [apiKey]: state.th[key] }), 400);
     });
   }
-  bindRange('rgSoil', 'lbSoil', 'soil');
-  bindRange('rgTemp', 'lbTemp', 'temp');
-  bindRange('rgLight', 'lbLight', 'light');
+  bindRange('rgSoil', 'lbSoil', 'soil', 'soil_th');
+  bindRange('rgTemp', 'lbTemp', 'temp', 'temp_th');
+  bindRange('rgLight', 'lbLight', 'light', 'light_th');
+  bindRange('rgGas', 'lbGas', 'gas', 'gas_th');
 
   /* ---------- Connection form ---------- */
   $('srcSelect').value = state.source;

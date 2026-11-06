@@ -42,7 +42,7 @@
       <p class="hero-sub">Smart Greenhouse Berbasis IoT</p>
       <p class="hero-desc">
         Pemantauan dan pengendalian lingkungan tanaman secara otomatis, efisien, dan real-time
-        menggunakan ESP32, sensor suhu, kelembapan, dan cahaya.
+        menggunakan ESP32 dengan sensor suhu, kelembapan, cahaya, dan gas.
       </p>
       <div class="hero-cta">
         <a href="#dashboard" class="btn btn-primary">Buka Dashboard</a>
@@ -71,7 +71,9 @@
       <p>Kondisi greenhouse diperbarui otomatis. Terakhir diperbarui: <b id="lastUpdate">–</b></p>
     </div>
 
-    <div class="grid-4">
+    <div class="gas-alert" id="gasAlert" hidden>⚠️ Peringatan: kadar gas/asap terdeteksi tinggi! Kipas dinyalakan untuk ventilasi.</div>
+
+    <div class="grid-sensors">
       <article class="card sensor" data-tone="temp">
         <div class="sensor-top"><span class="s-ico">🌡️</span><span class="s-name">Suhu Udara</span></div>
         <div class="ring">
@@ -111,14 +113,26 @@
         <div class="s-status" id="stLight">–</div>
         <div class="s-meta">Sensor LDR</div>
       </article>
+
+      <article class="card sensor" data-tone="gas">
+        <div class="sensor-top"><span class="s-ico">💨</span><span class="s-name">Kualitas Udara (Gas)</span></div>
+        <div class="ring">
+          <svg viewBox="0 0 120 120"><circle class="ring-bg" cx="60" cy="60" r="52"/><circle class="ring-fg" id="ringGas" cx="60" cy="60" r="52"/></svg>
+          <div class="ring-val"><b id="valGas">--</b><small>%</small></div>
+        </div>
+        <div class="s-status" id="stGas">–</div>
+        <div class="s-meta">Sensor Gas MQ-2</div>
+      </article>
     </div>
 
     <div class="grid-2">
       <article class="card">
-        <h3 class="card-title">📟 Tampilan LCD I2C 16×2</h3>
-        <div class="lcd" aria-label="Simulasi LCD">
+        <h3 class="card-title">📟 Tampilan LCD I2C 16×4</h3>
+        <div class="lcd" aria-label="Simulasi LCD 16x4">
           <div id="lcd1">T:--.-C H:--%</div>
           <div id="lcd2">Soil:--% L:--%</div>
+          <div id="lcd3">Gas:--%</div>
+          <div id="lcd4">P:0 F:0 G:0 AUTO</div>
         </div>
         <p class="hint">Tampilan ini meniru data yang tampil pada LCD fisik di prototype.</p>
       </article>
@@ -154,7 +168,7 @@
       <article class="card device" id="devFan">
         <div class="dev-ico fan">🌀</div>
         <h3>Kipas</h3>
-        <p>Aktif saat suhu udara terlalu tinggi.</p>
+        <p>Aktif saat suhu tinggi atau gas terdeteksi.</p>
         <label class="switch"><input type="checkbox" id="swFan"><span class="slider"></span></label>
         <div class="dev-state" id="stFan">MATI</div>
       </article>
@@ -182,6 +196,10 @@
           <label>Grow light menyala jika cahaya &lt; <b id="lbLight">30</b>%</label>
           <input type="range" id="rgLight" min="5" max="80" value="30">
         </div>
+        <div class="range">
+          <label>Kipas menyala jika gas &gt; <b id="lbGas">50</b>%</label>
+          <input type="range" id="rgGas" min="20" max="90" value="50">
+        </div>
       </div>
     </article>
   </section>
@@ -204,6 +222,11 @@
         <div class="legend"><span class="lg soil">Tanah (%)</span><span class="lg light">Cahaya (%)</span></div>
         <canvas id="chartSoil" height="260"></canvas>
       </article>
+      <article class="card wide">
+        <h3 class="card-title">Kadar Gas / Asap (MQ-2)</h3>
+        <div class="legend"><span class="lg gas">Level gas (%)</span></div>
+        <canvas id="chartGas" height="260"></canvas>
+      </article>
     </div>
   </section>
 
@@ -216,7 +239,7 @@
     </div>
 
     <div class="flow">
-      <div class="flow-step"><span>1</span><b>Sensor</b><small>DHT22, Soil Moisture, LDR membaca kondisi greenhouse</small></div>
+      <div class="flow-step"><span>1</span><b>Sensor</b><small>DHT22, Soil Moisture, LDR, dan MQ-2 membaca kondisi greenhouse</small></div>
       <div class="flow-arrow">➜</div>
       <div class="flow-step"><span>2</span><b>ESP32</b><small>Memproses data dan mengambil keputusan</small></div>
       <div class="flow-arrow">➜</div>
@@ -225,15 +248,16 @@
       <div class="flow-step"><span>4</span><b>Dashboard</b><small>Data dikirim via Wi-Fi dan dipantau lewat smartphone</small></div>
     </div>
 
-    <div class="grid-3 rules">
+    <div class="grid-4 rules">
       <div class="card rule"><h4>🚿 Tanah kering</h4><p>Kelembapan tanah di bawah batas → relay mengaktifkan pompa air 12 V.</p></div>
       <div class="card rule"><h4>🌀 Suhu tinggi</h4><p>Suhu di atas batas → relay menyalakan DC Fan 12 V untuk sirkulasi udara.</p></div>
       <div class="card rule"><h4>💡 Cahaya kurang</h4><p>Intensitas cahaya di bawah batas → LED grow light dinyalakan.</p></div>
+      <div class="card rule"><h4>💨 Gas terdeteksi</h4><p>Level gas/asap MQ-2 di atas batas → kipas menyala untuk ventilasi dan peringatan tampil di dashboard.</p></div>
     </div>
 
     <article class="card power">
       <h3 class="card-title">⚡ Jalur Daya</h3>
-      <p>Adaptor DC 12 V menyuplai pompa dan kipas secara langsung. Modul LM2596 menurunkan tegangan menjadi 5 V untuk ESP32 dan modul relay.</p>
+      <p>Adaptor DC 12 V menyuplai pompa dan kipas secara langsung. Modul LM2596 menurunkan tegangan menjadi 5 V untuk ESP32, modul relay, dan pemanas sensor MQ-2.</p>
     </article>
   </section>
 
@@ -252,13 +276,15 @@
           <tr><td>3</td><td>Capacitive Soil Moisture Sensor</td><td>1</td><td>Mengukur kelembapan tanah</td></tr>
           <tr><td>4</td><td>Sensor LDR</td><td>1</td><td>Mendeteksi intensitas cahaya</td></tr>
           <tr><td>5</td><td>Resistor 10 kΩ</td><td>1</td><td>Pembagi tegangan sensor LDR</td></tr>
-          <tr><td>6</td><td>Modul Relay 4 Channel 5 V</td><td>1</td><td>Mengendalikan perangkat listrik</td></tr>
-          <tr><td>7</td><td>Mini Water Pump DC 12 V</td><td>1</td><td>Melakukan penyiraman otomatis</td></tr>
-          <tr><td>8</td><td>DC Fan 12 V</td><td>1</td><td>Mengatur sirkulasi udara</td></tr>
-          <tr><td>9</td><td>LED Grow Light</td><td>1</td><td>Memberikan pencahayaan tambahan</td></tr>
-          <tr><td>10</td><td>LCD I2C 16×2</td><td>1</td><td>Menampilkan data pembacaan sensor</td></tr>
-          <tr><td>11</td><td>Modul LM2596</td><td>1</td><td>Menurunkan tegangan 12 V menjadi 5 V</td></tr>
-          <tr><td>12</td><td>Adaptor DC 12 V</td><td>1</td><td>Sumber tegangan utama</td></tr>
+          <tr><td>6</td><td>Sensor Gas MQ-2 (modul)</td><td>1</td><td>Mendeteksi gas dan asap mudah terbakar</td></tr>
+          <tr><td>7</td><td>Resistor 10 kΩ + 20 kΩ</td><td>1 set</td><td>Pembagi tegangan keluaran analog MQ-2 (5 V → ≤ 3,3 V)</td></tr>
+          <tr><td>8</td><td>Modul Relay 4 Channel 5 V</td><td>1</td><td>Mengendalikan perangkat listrik</td></tr>
+          <tr><td>9</td><td>Mini Water Pump DC 12 V</td><td>1</td><td>Melakukan penyiraman otomatis</td></tr>
+          <tr><td>10</td><td>DC Fan 12 V</td><td>1</td><td>Mengatur sirkulasi udara dan ventilasi gas</td></tr>
+          <tr><td>11</td><td>LED Grow Light</td><td>1</td><td>Memberikan pencahayaan tambahan</td></tr>
+          <tr><td>12</td><td>LCD I2C 16×4</td><td>1</td><td>Menampilkan data pembacaan sensor</td></tr>
+          <tr><td>13</td><td>Modul LM2596</td><td>1</td><td>Menurunkan tegangan 12 V menjadi 5 V</td></tr>
+          <tr><td>14</td><td>Adaptor DC 12 V</td><td>1</td><td>Sumber tegangan utama</td></tr>
         </tbody>
       </table>
     </div>
